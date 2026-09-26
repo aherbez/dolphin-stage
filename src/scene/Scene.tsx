@@ -1,30 +1,54 @@
-import { useRef } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
-import { Grid, OrbitControls } from '@react-three/drei'
-import type { Mesh } from 'three'
+import { Component, Suspense, useEffect, type ReactNode, type RefObject } from 'react'
+import { Canvas, useThree } from '@react-three/fiber'
+import { CameraControls } from '@react-three/drei'
+import { Stage } from './Stage.tsx'
+import { DEFAULT_PRESET } from './cameraPresets.ts'
 
-function SpinningBox({ spinning }: { spinning: boolean }) {
-  const ref = useRef<Mesh>(null)
-  useFrame((_, delta) => {
-    if (spinning && ref.current) ref.current.rotation.y += delta
-  })
-  return (
-    <mesh ref={ref} position={[0, 0.5, 0]} castShadow>
-      <boxGeometry />
-      <meshStandardMaterial color="#4fc3f7" />
-    </mesh>
-  )
+class LoadErrorBoundary extends Component<
+  { onError: (error: Error) => void; children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false }
+
+  static getDerivedStateFromError() {
+    return { failed: true }
+  }
+
+  componentDidCatch(error: Error) {
+    this.props.onError(error)
+  }
+
+  render() {
+    return this.state.failed ? null : this.props.children
+  }
 }
 
-export function Scene({ spinning }: { spinning: boolean }) {
+function InitialView() {
+  const controls = useThree((s) => s.controls) as CameraControls | null
+  useEffect(() => {
+    controls?.setLookAt(...DEFAULT_PRESET.position, ...DEFAULT_PRESET.target, false)
+  }, [controls])
+  return null
+}
+
+interface SceneProps {
+  controlsRef: RefObject<CameraControls | null>
+  onStageError: (error: Error) => void
+}
+
+export function Scene({ controlsRef, onStageError }: SceneProps) {
   return (
-    <Canvas shadows camera={{ position: [3, 2, 4], fov: 50 }}>
+    <Canvas camera={{ fov: 50 }}>
       <color attach="background" args={['#121212']} />
-      <ambientLight intensity={0.4} />
-      <directionalLight position={[5, 8, 5]} intensity={2} castShadow />
-      <SpinningBox spinning={spinning} />
-      <Grid infiniteGrid sectionColor="#444" cellColor="#2a2a2a" fadeDistance={30} />
-      <OrbitControls makeDefault />
+      <ambientLight intensity={0.6} />
+      <directionalLight position={[5, 8, 5]} intensity={2} />
+      <LoadErrorBoundary onError={onStageError}>
+        <Suspense fallback={null}>
+          <Stage />
+        </Suspense>
+      </LoadErrorBoundary>
+      <CameraControls ref={controlsRef} makeDefault />
+      <InitialView />
     </Canvas>
   )
 }
