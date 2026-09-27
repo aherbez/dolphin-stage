@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import {
   Button,
   IconButton,
@@ -15,6 +14,7 @@ import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
 import { useMeasureStore } from '../measure/measureStore.ts'
 import { distance, formatLength } from '../measure/units.ts'
 import { useSettingsStore } from '../settingsStore.ts'
+import { useHotkeys } from '../hooks/useHotkeys.ts'
 
 export function MeasureSection() {
   const {
@@ -30,14 +30,7 @@ export function MeasureSection() {
   } = useMeasureStore()
   const units = useSettingsStore((s) => s.units)
 
-  useEffect(() => {
-    if (!placing) return
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') cancelMeasuring()
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [placing, cancelMeasuring])
+  useHotkeys({ escape: cancelMeasuring }, placing)
 
   return (
     <Stack spacing={1}>

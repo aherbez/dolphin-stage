@@ -61,27 +61,31 @@ function FlatObject({ flat }: { flat: Flat }) {
     if (e.delta <= DRAG_THRESHOLD) select(flat.id)
   }
 
-  // Keep scaling uniform so the image never distorts: follow whichever handle moved furthest
   const onObjectChange = () => {
     const group = groupRef.current
     if (!group || mode !== 'scale') return
-    const { x, y } = group.scale
-    const s = Math.max(MIN_SCALE, Math.abs(x - 1) > Math.abs(y - 1) ? x : y)
-    group.scale.setScalar(s)
-    setDragScale(s)
+    const { scale } = group
+    if (flat.aspectLocked) {
+      // Keep the proportions: follow whichever handle moved furthest
+      scale.setScalar(Math.max(MIN_SCALE, Math.abs(scale.x - 1) > Math.abs(scale.y - 1) ? scale.x : scale.y))
+    } else {
+      scale.set(Math.max(MIN_SCALE, scale.x), Math.max(MIN_SCALE, scale.y), 1)
+    }
+    setDragScale([scale.x, scale.y])
   }
 
-  // Commit the gizmo's result to the store when a drag ends; scale folds into height
+  // Commit the gizmo's result to the store when a drag ends; scale folds into the size
   const onMouseUp = () => {
     const group = groupRef.current
     if (!group) return
     updateFlat(flat.id, {
       position: group.position.toArray(),
       rotationY: group.rotation.y,
+      width: flat.width * group.scale.x,
       height: flat.height * group.scale.y,
     })
     group.scale.setScalar(1)
-    setDragScale(1)
+    setDragScale([1, 1])
   }
 
   return (
@@ -92,7 +96,7 @@ function FlatObject({ flat }: { flat: Flat }) {
         rotation={[0, flat.rotationY, 0]}
         onClick={measuring ? undefined : onClick}
       >
-        <group scale={[flat.height * flat.aspect, flat.height, 1]}>
+        <group scale={[flat.width, flat.height, 1]}>
           <ErrorBoundary fallback={<Placeholder />}>
             <Suspense fallback={<Placeholder />}>
               <FlatSurface imageId={flat.imageId} />

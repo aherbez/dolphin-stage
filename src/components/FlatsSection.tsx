@@ -11,26 +11,44 @@ import {
   Stack,
   ToggleButton,
   ToggleButtonGroup,
+  Tooltip,
   Typography,
 } from '@mui/material'
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate'
 import DeleteIcon from '@mui/icons-material/Delete'
+import LockIcon from '@mui/icons-material/Lock'
+import LockOpenIcon from '@mui/icons-material/LockOpen'
 import type { CameraControls } from '@react-three/drei'
 import { useFlatsStore, useFlatsUiStore, type Flat } from '../flats/flatsStore.ts'
 import { prepareImage, saveImage } from '../flats/imageStore.ts'
 import { placementFacingCamera } from '../flats/placement.ts'
-import { formatLength } from '../measure/units.ts'
 import { useSettingsStore } from '../settingsStore.ts'
+import { useHotkeys } from '../hooks/useHotkeys.ts'
+import { LengthInput } from './LengthInput.tsx'
 
 // New flats start at a standard 8' height; width follows the image's aspect ratio
 const DEFAULT_HEIGHT = 2.4384
+
+const MODES = [
+  { value: 'translate', label: 'Move', key: 'm' },
+  { value: 'rotate', label: 'Rotate', key: 'r' },
+  { value: 'scale', label: 'Scale', key: 's' },
+] as const
 
 function SelectedFlatDetails({ flat }: { flat: Flat }) {
   const units = useSettingsStore((s) => s.units)
   const mode = useFlatsUiStore((s) => s.mode)
   const setMode = useFlatsUiStore((s) => s.setMode)
   const dragScale = useFlatsUiStore((s) => s.dragScale)
-  const height = flat.height * dragScale
+  const updateFlat = useFlatsStore((s) => s.updateFlat)
+  const resizeFlat = useFlatsStore((s) => s.resizeFlat)
+
+  useHotkeys(Object.fromEntries(MODES.map((m) => [m.key, () => setMode(m.value)])))
+
+  // Include any scale drag in progress so the fields track the gizmo live
+  const width = flat.width * dragScale[0]
+  const height = flat.height * dragScale[1]
+  const locked = flat.aspectLocked
 
   return (
     <Paper variant="outlined" sx={{ p: 1.5 }}>
@@ -38,9 +56,33 @@ function SelectedFlatDetails({ flat }: { flat: Flat }) {
         <Typography variant="subtitle2" noWrap>
           {flat.name}
         </Typography>
-        <Typography variant="body2">
-          {formatLength(height * flat.aspect, units)} W × {formatLength(height, units)} H
-        </Typography>
+        <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+          <Typography variant="overline">Dimensions</Typography>
+          <Tooltip title={locked ? 'Aspect ratio locked' : 'Aspect ratio unlocked'}>
+            <IconButton
+              size="small"
+              aria-label="Lock aspect ratio"
+              aria-pressed={locked}
+              color={locked ? 'primary' : 'default'}
+              onClick={() => updateFlat(flat.id, { aspectLocked: !locked })}
+            >
+              {locked ? <LockIcon fontSize="small" /> : <LockOpenIcon fontSize="small" />}
+            </IconButton>
+          </Tooltip>
+        </Stack>
+        {(['width', 'height'] as const).map((dim) => (
+          <Stack key={dim} direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+            <Typography variant="body2" sx={{ width: 48, flexShrink: 0, textTransform: 'capitalize' }}>
+              {dim}
+            </Typography>
+            <LengthInput
+              value={dim === 'width' ? width : height}
+              units={units}
+              label={dim === 'width' ? 'Width' : 'Height'}
+              onChange={(meters) => resizeFlat(flat.id, { [dim]: meters })}
+            />
+          </Stack>
+        ))}
         <ToggleButtonGroup
           size="small"
           exclusive
@@ -48,9 +90,11 @@ function SelectedFlatDetails({ flat }: { flat: Flat }) {
           value={mode}
           onChange={(_, value) => value && setMode(value)}
         >
-          <ToggleButton value="translate">Move</ToggleButton>
-          <ToggleButton value="rotate">Rotate</ToggleButton>
-          <ToggleButton value="scale">Scale</ToggleButton>
+          {MODES.map((m) => (
+            <Tooltip key={m.value} title={`${m.label} (${m.key.toUpperCase()})`}>
+              <ToggleButton value={m.value}>{m.label}</ToggleButton>
+            </Tooltip>
+          ))}
         </ToggleButtonGroup>
       </Stack>
     </Paper>
@@ -77,16 +121,17 @@ export function FlatsSection({ controlsRef }: { controlsRef: RefObject<CameraCon
     setError(null)
     for (const file of files) {
       try {
-        const { blob, width, height } = await prepareImage(file)
+        const image = await prepareImage(file)
         const imageId = crypto.randomUUID()
-        await saveImage(imageId, blob)
+        await saveImage(imageId, image.blob)
         const id = crypto.randomUUID()
         addFlat({
           id,
           name: file.name.replace(/\.[^.]+$/, ''),
           imageId,
-          aspect: width / height,
+          width: (DEFAULT_HEIGHT * image.width) / image.height,
           height: DEFAULT_HEIGHT,
+          aspectLocked: true,
           ...placementFacingCamera(controls),
         })
         select(id)
