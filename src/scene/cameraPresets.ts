@@ -7,8 +7,8 @@ export interface CameraPreset {
 }
 
 // Placeholder values, assuming the stage is centered near the origin, units are
-// meters, and the audience sits toward +z. Once the real scan is loaded, frame each
-// view by orbiting and use "Copy current view" to grab exact numbers.
+// meters, and the audience sits toward +z. Views saved in the app ("Save current
+// view") are stored in localStorage; see savedViewsStore.ts.
 export const CAMERA_PRESETS: CameraPreset[] = [
   { name: 'Front row center', position: [0, 1.2, 4], target: [0, 1.5, -3] },
   { name: 'Middle center', position: [0, 2, 10], target: [0, 1.5, -3] },

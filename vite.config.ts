@@ -6,6 +6,6 @@ export default defineConfig(({ command }) => ({
   plugins: [react()],
   // GitHub Pages serves project sites from /<repo-name>/
   base: command === 'build' ? '/dolphin-stage/' : '/',
-  // three.js alone is ~700 kB minified
-  build: { chunkSizeWarningLimit: 1500 },
+  // three.js + three-mesh-bvh are ~1 MB minified
+  build: { chunkSizeWarningLimit: 2000 },
 }))
