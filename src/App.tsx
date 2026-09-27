@@ -45,7 +45,7 @@ export default function App() {
             </Alert>
           )}
         </Box>
-        <PanelSection title="Camera views">
+        <PanelSection title="Camera views" defaultExpanded>
           <CameraPresetsSection controlsRef={controlsRef} />
         </PanelSection>
         <PanelSection title="Scenes">

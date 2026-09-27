@@ -12,7 +12,6 @@ import {
   ListItemButton,
   ListItemText,
   Stack,
-  TextField,
   Tooltip,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
@@ -20,35 +19,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
 import { selectCurrentScene, useFlatsStore, type Scene } from '../flats/flatsStore.ts'
-
-function RenameField({ scene, onDone }: { scene: Scene; onDone: () => void }) {
-  const renameScene = useFlatsStore((s) => s.renameScene)
-  const [name, setName] = useState(scene.name)
-
-  const commit = () => {
-    const trimmed = name.trim()
-    if (trimmed) renameScene(scene.id, trimmed)
-    onDone()
-  }
-
-  return (
-    <TextField
-      size="small"
-      fullWidth
-      autoFocus
-      value={name}
-      onChange={(e) => setName(e.target.value)}
-      onFocus={(e) => e.target.select()}
-      onBlur={commit}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') commit()
-        if (e.key === 'Escape') onDone()
-      }}
-      slotProps={{ htmlInput: { 'aria-label': 'Scene name' } }}
-      sx={{ my: 0.5 }}
-    />
-  )
-}
+import { InlineRenameField } from './InlineRenameField.tsx'
 
 export function ScenesSection() {
   const scenes = useFlatsStore((s) => s.scenes)
@@ -57,6 +28,7 @@ export function ScenesSection() {
   const addScene = useFlatsStore((s) => s.addScene)
   const duplicateScene = useFlatsStore((s) => s.duplicateScene)
   const deleteScene = useFlatsStore((s) => s.deleteScene)
+  const renameScene = useFlatsStore((s) => s.renameScene)
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [confirming, setConfirming] = useState<Scene | null>(null)
   const canDelete = scenes.length > 1
@@ -73,7 +45,12 @@ export function ScenesSection() {
         {scenes.map((scene) =>
           scene.id === renamingId ? (
             <ListItem key={scene.id} disablePadding>
-              <RenameField scene={scene} onDone={() => setRenamingId(null)} />
+              <InlineRenameField
+                initialName={scene.name}
+                label="Scene name"
+                onRename={(name) => renameScene(scene.id, name)}
+                onDone={() => setRenamingId(null)}
+              />
             </ListItem>
           ) : (
             <ListItem

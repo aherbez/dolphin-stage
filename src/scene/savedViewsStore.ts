@@ -10,7 +10,9 @@ interface SavedViewsState {
   views: SavedView[]
   /** Used to name new views; persisted so names aren't reused after a delete */
   nextNumber: number
-  addView: (position: Vec3, target: Vec3) => void
+  /** Saves a view and returns its id */
+  addView: (position: Vec3, target: Vec3) => string
+  renameView: (id: string, name: string) => void
   removeView: (id: string) => void
 }
 
@@ -20,19 +22,15 @@ export const useSavedViewsStore = create<SavedViewsState>()(
     (set) => ({
       views: [],
       nextNumber: 1,
-      addView: (position, target) =>
+      addView: (position, target) => {
+        const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
         set((s) => ({
-          views: [
-            ...s.views,
-            {
-              id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-              name: `Saved view ${s.nextNumber}`,
-              position,
-              target,
-            },
-          ],
+          views: [...s.views, { id, name: `Saved view ${s.nextNumber}`, position, target }],
           nextNumber: s.nextNumber + 1,
-        })),
+        }))
+        return id
+      },
+      renameView: (id, name) => set((s) => ({ views: s.views.map((v) => (v.id === id ? { ...v, name } : v)) })),
       removeView: (id) => set((s) => ({ views: s.views.filter((v) => v.id !== id) })),
     }),
     { name: 'dolphin-stage:saved-views' },
