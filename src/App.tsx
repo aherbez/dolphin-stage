@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Alert, Box, Paper, Stack, Typography } from '@mui/material'
 import type { CameraControls } from '@react-three/drei'
 import { Scene } from './scene/Scene.tsx'
@@ -9,6 +9,7 @@ import { PanelSection } from './components/PanelSection.tsx'
 import { FlatsSection } from './components/FlatsSection.tsx'
 import { UnitsToggle } from './components/UnitsToggle.tsx'
 import { useMeasureStore } from './measure/measureStore.ts'
+import { reconcileLibrary } from './images/library.ts'
 
 const PANEL_WIDTH = 320
 
@@ -16,6 +17,11 @@ export default function App() {
   const controlsRef = useRef<CameraControls>(null)
   const [stageError, setStageError] = useState<Error | null>(null)
   const placing = useMeasureStore((s) => s.placing)
+
+  // Give flats created before the image library existed a library entry
+  useEffect(() => {
+    reconcileLibrary()
+  }, [])
 
   return (
     <Box sx={{ position: 'fixed', inset: 0, display: 'flex' }}>

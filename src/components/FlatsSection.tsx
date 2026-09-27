@@ -1,6 +1,5 @@
-import { useRef, useState, type ChangeEvent, type RefObject } from 'react'
+import { useState, type RefObject } from 'react'
 import {
-  Alert,
   Button,
   IconButton,
   List,
@@ -14,17 +13,19 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material'
-import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate'
+import AddIcon from '@mui/icons-material/Add'
+import CollectionsIcon from '@mui/icons-material/Collections'
 import DeleteIcon from '@mui/icons-material/Delete'
 import LockIcon from '@mui/icons-material/Lock'
 import LockOpenIcon from '@mui/icons-material/LockOpen'
 import type { CameraControls } from '@react-three/drei'
 import { useFlatsStore, useFlatsUiStore, type Flat } from '../flats/flatsStore.ts'
-import { prepareImage, saveImage } from '../flats/imageStore.ts'
+import type { LibraryImage } from '../images/libraryStore.ts'
 import { placementFacingCamera } from '../flats/placement.ts'
 import { useSettingsStore } from '../settingsStore.ts'
 import { useHotkeys } from '../hooks/useHotkeys.ts'
 import { LengthInput } from './LengthInput.tsx'
+import { ImageLibraryDialog } from './ImageLibraryDialog.tsx'
 
 // New flats start at a standard 8' height; width follows the image's aspect ratio
 const DEFAULT_HEIGHT = 2.4384
@@ -105,60 +106,40 @@ export function FlatsSection({ controlsRef }: { controlsRef: RefObject<CameraCon
   const { flats, addFlat, removeFlat } = useFlatsStore()
   const selectedId = useFlatsUiStore((s) => s.selectedId)
   const select = useFlatsUiStore((s) => s.select)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [library, setLibrary] = useState<'closed' | 'pick' | 'manage'>('closed')
 
   const selected = flats.find((f) => f.id === selectedId)
 
-  const onFilesChosen = async (e: ChangeEvent<HTMLInputElement>) => {
-    const files = [...(e.target.files ?? [])]
-    e.target.value = '' // allow choosing the same file again
+  const addToStage = (image: LibraryImage) => {
     const controls = controlsRef.current
-    if (!files.length || !controls) return
-
-    setBusy(true)
-    setError(null)
-    for (const file of files) {
-      try {
-        const image = await prepareImage(file)
-        const imageId = crypto.randomUUID()
-        await saveImage(imageId, image.blob)
-        const id = crypto.randomUUID()
-        addFlat({
-          id,
-          name: file.name.replace(/\.[^.]+$/, ''),
-          imageId,
-          width: (DEFAULT_HEIGHT * image.width) / image.height,
-          height: DEFAULT_HEIGHT,
-          aspectLocked: true,
-          ...placementFacingCamera(controls),
-        })
-        select(id)
-      } catch (err) {
-        console.error(err)
-        setError(`Couldn't add "${file.name}". Is it an image?`)
-      }
-    }
-    setBusy(false)
+    if (!controls) return
+    const id = crypto.randomUUID()
+    addFlat({
+      id,
+      name: image.name,
+      imageId: image.id,
+      width: (DEFAULT_HEIGHT * image.width) / image.height,
+      height: DEFAULT_HEIGHT,
+      aspectLocked: true,
+      ...placementFacingCamera(controls),
+    })
+    select(id)
+    setLibrary('closed')
   }
 
   return (
     <Stack spacing={1}>
-      <input ref={inputRef} type="file" accept="image/*" multiple hidden onChange={onFilesChosen} />
-      <Button
-        variant="contained"
-        startIcon={<AddPhotoAlternateIcon />}
-        disabled={busy}
-        onClick={() => inputRef.current?.click()}
-      >
-        {busy ? 'Adding…' : 'Add flat from image'}
+      <Button variant="contained" startIcon={<AddIcon />} onClick={() => setLibrary('pick')}>
+        Add flat
       </Button>
-      {error && (
-        <Alert severity="error" onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
+      <Button size="small" startIcon={<CollectionsIcon />} onClick={() => setLibrary('manage')}>
+        Manage images
+      </Button>
+      <ImageLibraryDialog
+        open={library !== 'closed'}
+        onClose={() => setLibrary('closed')}
+        onAddToStage={library === 'pick' ? addToStage : undefined}
+      />
       {selected && <SelectedFlatDetails flat={selected} />}
       {flats.length > 0 && (
         <List dense disablePadding>

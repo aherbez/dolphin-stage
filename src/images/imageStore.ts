@@ -34,6 +34,7 @@ export async function prepareImage(file: File): Promise<PreparedImage> {
   return { blob, width, height }
 }
 
+/** Stores an image's original bytes. */
 export async function saveImage(id: string, blob: Blob) {
   const stored: StoredImage = { type: blob.type, data: await blob.arrayBuffer() }
   await set(imageKey(id), stored, idbStore)
@@ -41,24 +42,14 @@ export async function saveImage(id: string, blob: Blob) {
   navigator.storage?.persist?.()
 }
 
-// Cached per image so React's use() gets a stable promise and each blob gets one object URL
-const urlPromises = new Map<string, Promise<string | null>>()
-
-/** Resolves to an object URL for a stored image, or null if it's missing from storage. */
-export function loadImageUrl(id: string) {
-  let promise = urlPromises.get(id)
-  if (!promise) {
-    promise = get<StoredImage>(imageKey(id), idbStore).then((stored) =>
-      stored ? URL.createObjectURL(new Blob([stored.data], { type: stored.type })) : null,
-    )
-    urlPromises.set(id, promise)
-  }
-  return promise
+/** Loads an image's original bytes, or null if they're missing from storage. */
+export async function loadImageBlob(id: string): Promise<Blob | null> {
+  const stored = await get<StoredImage | Blob>(imageKey(id), idbStore)
+  if (!stored) return null
+  // Early builds stored Blobs directly
+  return stored instanceof Blob ? stored : new Blob([stored.data], { type: stored.type })
 }
 
-export async function deleteImage(id: string) {
-  const url = await urlPromises.get(id)
-  if (url) URL.revokeObjectURL(url)
-  urlPromises.delete(id)
-  await del(imageKey(id), idbStore)
+export function deleteImage(id: string) {
+  return del(imageKey(id), idbStore)
 }

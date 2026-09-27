@@ -2,12 +2,11 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Vec3 } from '../scene/cameraPresets.ts'
 import { idbStateStorage } from '../storage/idb.ts'
-import { deleteImage } from './imageStore.ts'
 
 export interface Flat {
   id: string
   name: string
-  /** Key of the image in IndexedDB (see imageStore.ts) */
+  /** The library image shown on the flat (see images/libraryStore.ts) */
   imageId: string
   /** Size in meters */
   width: number
@@ -29,12 +28,13 @@ interface FlatsState {
   /** Sets width and/or height, adjusting the other to match if the aspect ratio is locked */
   resizeFlat: (id: string, size: { width?: number; height?: number }) => void
   removeFlat: (id: string) => void
+  removeFlatsWithImage: (imageId: string) => void
 }
 
 // Flats persist to IndexedDB alongside their images
 export const useFlatsStore = create<FlatsState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       flats: [],
       addFlat: (flat) => set((s) => ({ flats: [...s.flats, flat] })),
       updateFlat: (id, update) =>
@@ -49,11 +49,9 @@ export const useFlatsStore = create<FlatsState>()(
             return { ...f, width: width ?? f.width, height: height ?? f.height }
           }),
         })),
-      removeFlat: (id) => {
-        const flat = get().flats.find((f) => f.id === id)
-        set((s) => ({ flats: s.flats.filter((f) => f.id !== id) }))
-        if (flat) deleteImage(flat.imageId)
-      },
+      removeFlat: (id) => set((s) => ({ flats: s.flats.filter((f) => f.id !== id) })),
+      removeFlatsWithImage: (imageId) =>
+        set((s) => ({ flats: s.flats.filter((f) => f.imageId !== imageId) })),
     }),
     {
       name: 'dolphin-stage:flats',

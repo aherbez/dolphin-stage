@@ -1,10 +1,11 @@
 import { Suspense, use, useRef, type ReactNode, type RefObject } from 'react'
 import type { ThreeEvent } from '@react-three/fiber'
-import { TransformControls, useTexture } from '@react-three/drei'
-import { DoubleSide, SRGBColorSpace, type Group } from 'three'
+import { TransformControls } from '@react-three/drei'
+import { DoubleSide, type DataTexture, type Group } from 'three'
 import { useMeasureStore } from '../measure/measureStore.ts'
 import { useFlatsStore, useFlatsUiStore, type Flat } from './flatsStore.ts'
-import { loadImageUrl } from './imageStore.ts'
+import { useLibraryStore, type LibraryImage } from '../images/libraryStore.ts'
+import { loadImageTexture } from '../images/textures.ts'
 import { ErrorBoundary } from '../scene/ErrorBoundary.tsx'
 
 // Pointer travel (px) between down and up beyond which a click counts as an orbit drag
@@ -29,21 +30,22 @@ function Placeholder() {
   )
 }
 
-function TexturedPlane({ url }: { url: string }) {
-  const texture = useTexture(url, (t) => {
-    t.colorSpace = SRGBColorSpace
-  })
+function TexturedPlane({ texture }: { texture: DataTexture }) {
   return (
     <UnitPlane>
-      {/* Unlit so the artwork shows its true colors; alphaTest gives cut-out edges for transparent PNGs */}
+      {/* Unlit so the artwork shows its true colors; alphaTest turns transparent (knocked-out) areas into hard cut-outs */}
       <meshBasicMaterial map={texture} side={DoubleSide} alphaTest={0.5} toneMapped={false} />
     </UnitPlane>
   )
 }
 
+function ImageSurface({ image }: { image: LibraryImage }) {
+  return <TexturedPlane texture={use(loadImageTexture(image))} />
+}
+
 function FlatSurface({ imageId }: { imageId: string }) {
-  const url = use(loadImageUrl(imageId))
-  return url ? <TexturedPlane url={url} /> : <Placeholder />
+  const image = useLibraryStore((s) => s.images.find((img) => img.id === imageId))
+  return image ? <ImageSurface image={image} /> : <Placeholder />
 }
 
 function FlatObject({ flat }: { flat: Flat }) {
