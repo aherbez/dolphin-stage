@@ -2,8 +2,6 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Vec3 } from '../scene/cameraPresets.ts'
 
-export type Units = 'imperial' | 'metric'
-
 export interface Measurement {
   id: number
   name: string
@@ -17,7 +15,6 @@ interface MeasureState {
   /** Used for ids and default names; persisted so they aren't reused after a reload */
   nextId: number
   selectedId: number | null
-  units: Units
   /** True while the user is placing the points of a new measurement */
   placing: boolean
   /** First point of the measurement being placed */
@@ -32,7 +29,6 @@ interface MeasureState {
   select: (id: number | null) => void
   remove: (id: number) => void
   toggleVisible: (id: number) => void
-  setUnits: (units: Units) => void
 }
 
 export const useMeasureStore = create<MeasureState>()(
@@ -41,7 +37,6 @@ export const useMeasureStore = create<MeasureState>()(
       measurements: [],
       nextId: 1,
       selectedId: null,
-      units: 'imperial',
       placing: false,
       pendingStart: null,
       hoverPoint: null,
@@ -84,13 +79,11 @@ export const useMeasureStore = create<MeasureState>()(
           measurements: s.measurements.map((m) => (m.id === id ? { ...m, visible: !m.visible } : m)),
         })),
 
-      setUnits: (units) => set({ units }),
     }),
     {
-      // Saved measurements and the unit choice are kept in localStorage; in-progress
-      // placement and selection are not
+      // Saved measurements are kept in localStorage; in-progress placement and selection are not
       name: 'dolphin-stage:measurements',
-      partialize: ({ measurements, nextId, units }) => ({ measurements, nextId, units }),
+      partialize: ({ measurements, nextId }) => ({ measurements, nextId }),
     },
   ),
 )

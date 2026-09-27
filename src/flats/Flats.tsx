@@ -1,0 +1,122 @@
+import { Suspense, use, useRef, type ReactNode, type RefObject } from 'react'
+import type { ThreeEvent } from '@react-three/fiber'
+import { TransformControls, useTexture } from '@react-three/drei'
+import { DoubleSide, SRGBColorSpace, type Group } from 'three'
+import { useMeasureStore } from '../measure/measureStore.ts'
+import { useFlatsStore, useFlatsUiStore, type Flat } from './flatsStore.ts'
+import { loadImageUrl } from './imageStore.ts'
+import { ErrorBoundary } from '../scene/ErrorBoundary.tsx'
+
+// Pointer travel (px) between down and up beyond which a click counts as an orbit drag
+const DRAG_THRESHOLD = 4
+const MIN_SCALE = 0.01
+
+/** A 1×1 plane whose origin is the center of its bottom edge. */
+function UnitPlane({ children }: { children: ReactNode }) {
+  return (
+    <mesh position={[0, 0.5, 0]}>
+      <planeGeometry />
+      {children}
+    </mesh>
+  )
+}
+
+function Placeholder() {
+  return (
+    <UnitPlane>
+      <meshBasicMaterial color="#666" side={DoubleSide} />
+    </UnitPlane>
+  )
+}
+
+function TexturedPlane({ url }: { url: string }) {
+  const texture = useTexture(url, (t) => {
+    t.colorSpace = SRGBColorSpace
+  })
+  return (
+    <UnitPlane>
+      {/* Unlit so the artwork shows its true colors; alphaTest gives cut-out edges for transparent PNGs */}
+      <meshBasicMaterial map={texture} side={DoubleSide} alphaTest={0.5} toneMapped={false} />
+    </UnitPlane>
+  )
+}
+
+function FlatSurface({ imageId }: { imageId: string }) {
+  const url = use(loadImageUrl(imageId))
+  return url ? <TexturedPlane url={url} /> : <Placeholder />
+}
+
+function FlatObject({ flat }: { flat: Flat }) {
+  const groupRef = useRef<Group>(null)
+  const selected = useFlatsUiStore((s) => s.selectedId === flat.id)
+  const mode = useFlatsUiStore((s) => s.mode)
+  const select = useFlatsUiStore((s) => s.select)
+  const setDragScale = useFlatsUiStore((s) => s.setDragScale)
+  const updateFlat = useFlatsStore((s) => s.updateFlat)
+  // While measuring, clicks pass through to the measure tool instead of selecting
+  const measuring = useMeasureStore((s) => s.placing)
+
+  const onClick = (e: ThreeEvent<MouseEvent>) => {
+    e.stopPropagation()
+    if (e.delta <= DRAG_THRESHOLD) select(flat.id)
+  }
+
+  // Keep scaling uniform so the image never distorts: follow whichever handle moved furthest
+  const onObjectChange = () => {
+    const group = groupRef.current
+    if (!group || mode !== 'scale') return
+    const { x, y } = group.scale
+    const s = Math.max(MIN_SCALE, Math.abs(x - 1) > Math.abs(y - 1) ? x : y)
+    group.scale.setScalar(s)
+    setDragScale(s)
+  }
+
+  // Commit the gizmo's result to the store when a drag ends; scale folds into height
+  const onMouseUp = () => {
+    const group = groupRef.current
+    if (!group) return
+    updateFlat(flat.id, {
+      position: group.position.toArray(),
+      rotationY: group.rotation.y,
+      height: flat.height * group.scale.y,
+    })
+    group.scale.setScalar(1)
+    setDragScale(1)
+  }
+
+  return (
+    <>
+      <group
+        ref={groupRef}
+        position={flat.position}
+        rotation={[0, flat.rotationY, 0]}
+        onClick={measuring ? undefined : onClick}
+      >
+        <group scale={[flat.height * flat.aspect, flat.height, 1]}>
+          <ErrorBoundary fallback={<Placeholder />}>
+            <Suspense fallback={<Placeholder />}>
+              <FlatSurface imageId={flat.imageId} />
+            </Suspense>
+          </ErrorBoundary>
+        </group>
+      </group>
+      {selected && !measuring && (
+        <TransformControls
+          object={groupRef as RefObject<Group>}
+          mode={mode}
+          // Flats stand upright: rotate about the vertical axis only, and scale in the plane
+          showX={mode !== 'rotate'}
+          showZ={mode === 'translate'}
+          space={mode === 'translate' ? 'world' : 'local'}
+          onObjectChange={onObjectChange}
+          onMouseUp={onMouseUp}
+        />
+      )}
+    </>
+  )
+}
+
+export function Flats() {
+  const flats = useFlatsStore((s) => s.flats)
+  return flats.map((flat) => <FlatObject key={flat.id} flat={flat} />)
+}

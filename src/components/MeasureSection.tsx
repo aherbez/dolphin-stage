@@ -7,8 +7,6 @@ import {
   ListItemButton,
   ListItemText,
   Stack,
-  ToggleButton,
-  ToggleButtonGroup,
   Typography,
 } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -16,12 +14,12 @@ import VisibilityIcon from '@mui/icons-material/Visibility'
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
 import { useMeasureStore } from '../measure/measureStore.ts'
 import { distance, formatLength } from '../measure/units.ts'
+import { useSettingsStore } from '../settingsStore.ts'
 
 export function MeasureSection() {
   const {
     measurements,
     selectedId,
-    units,
     placing,
     pendingStart,
     startMeasuring,
@@ -29,8 +27,8 @@ export function MeasureSection() {
     select,
     remove,
     toggleVisible,
-    setUnits,
   } = useMeasureStore()
+  const units = useSettingsStore((s) => s.units)
 
   useEffect(() => {
     if (!placing) return
@@ -43,16 +41,6 @@ export function MeasureSection() {
 
   return (
     <Stack spacing={1}>
-      <ToggleButtonGroup
-        size="small"
-        exclusive
-        fullWidth
-        value={units}
-        onChange={(_, value) => value && setUnits(value)}
-      >
-        <ToggleButton value="imperial">ft / in</ToggleButton>
-        <ToggleButton value="metric">m</ToggleButton>
-      </ToggleButtonGroup>
       {placing ? (
         <>
           <Button variant="contained" color="secondary" onClick={cancelMeasuring}>

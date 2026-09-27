@@ -4,6 +4,7 @@ import { Html, Line } from '@react-three/drei'
 import type { Vec3 } from '../scene/cameraPresets.ts'
 import { useMeasureStore, type Measurement } from './measureStore.ts'
 import { distance, formatLength } from './units.ts'
+import { useSettingsStore } from '../settingsStore.ts'
 
 const DEFAULT_COLOR = '#ffb300'
 const SELECTED_COLOR = '#00e5ff'
@@ -58,7 +59,7 @@ function Segment({ start, end, color }: { start: Vec3; end: Vec3; color: string 
 }
 
 function Label({ start, end }: { start: Vec3; end: Vec3 }) {
-  const units = useMeasureStore((s) => s.units)
+  const units = useSettingsStore((s) => s.units)
   // By default drei's Html attaches to R3F's event target, which isn't connected until
   // after the Canvas first renders (and flips during StrictMode's effect re-runs). A label
   // mounted that early (e.g. restored on page load) gets its React root recreated

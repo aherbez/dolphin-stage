@@ -1,5 +1,5 @@
 import type { Vec3 } from '../scene/cameraPresets.ts'
-import type { Units } from './measureStore.ts'
+import type { Units } from '../settingsStore.ts'
 
 const METERS_PER_INCH = 0.0254
 const QUARTERS = ['', '¼', '½', '¾']
