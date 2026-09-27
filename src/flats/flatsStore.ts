@@ -46,6 +46,8 @@ interface FlatsState {
   renameScene: (id: string, name: string) => void
   /** Deletes a scene unless it's the last one; deleting the current scene switches to a neighbor */
   deleteScene: (id: string) => void
+  /** Moves a scene to where another scene currently is in the list */
+  moveScene: (id: string, toId: string) => void
   switchScene: (id: string) => void
 }
 
@@ -134,6 +136,15 @@ export const useFlatsStore = create<FlatsState>()(
           }
           set((s) => ({ scenes: s.scenes.filter((scene) => scene.id !== id) }))
         },
+        moveScene: (id, toId) =>
+          set((s) => {
+            const from = s.scenes.findIndex((scene) => scene.id === id)
+            const to = s.scenes.findIndex((scene) => scene.id === toId)
+            if (from < 0 || to < 0 || from === to) return s
+            const scenes = [...s.scenes]
+            scenes.splice(to, 0, ...scenes.splice(from, 1))
+            return { scenes }
+          }),
         switchScene: (id) => {
           if (id === selectCurrentScene(get()).id) return
           // The selected flat belongs to the old scene
