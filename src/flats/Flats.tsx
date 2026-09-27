@@ -3,7 +3,7 @@ import type { ThreeEvent } from '@react-three/fiber'
 import { TransformControls } from '@react-three/drei'
 import { DoubleSide, type DataTexture, type Group } from 'three'
 import { useMeasureStore } from '../measure/measureStore.ts'
-import { useFlatsStore, useFlatsUiStore, type Flat } from './flatsStore.ts'
+import { selectFlats, useFlatsStore, useFlatsUiStore, type Flat } from './flatsStore.ts'
 import { useLibraryStore, type LibraryImage } from '../images/libraryStore.ts'
 import { loadImageTexture } from '../images/textures.ts'
 import { ErrorBoundary } from '../scene/ErrorBoundary.tsx'
@@ -123,6 +123,6 @@ function FlatObject({ flat }: { flat: Flat }) {
 }
 
 export function Flats() {
-  const flats = useFlatsStore((s) => s.flats)
+  const flats = useFlatsStore(selectFlats)
   return flats.map((flat) => <FlatObject key={flat.id} flat={flat} />)
 }

@@ -19,7 +19,7 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import LockIcon from '@mui/icons-material/Lock'
 import LockOpenIcon from '@mui/icons-material/LockOpen'
 import type { CameraControls } from '@react-three/drei'
-import { useFlatsStore, useFlatsUiStore, type Flat } from '../flats/flatsStore.ts'
+import { selectFlats, useFlatsStore, useFlatsUiStore, type Flat } from '../flats/flatsStore.ts'
 import type { LibraryImage } from '../images/libraryStore.ts'
 import { placementFacingCamera } from '../flats/placement.ts'
 import { useSettingsStore } from '../settingsStore.ts'
@@ -103,7 +103,9 @@ function SelectedFlatDetails({ flat }: { flat: Flat }) {
 }
 
 export function FlatsSection({ controlsRef }: { controlsRef: RefObject<CameraControls | null> }) {
-  const { flats, addFlat, removeFlat } = useFlatsStore()
+  const flats = useFlatsStore(selectFlats)
+  const addFlat = useFlatsStore((s) => s.addFlat)
+  const removeFlat = useFlatsStore((s) => s.removeFlat)
   const selectedId = useFlatsUiStore((s) => s.selectedId)
   const select = useFlatsUiStore((s) => s.select)
   const [library, setLibrary] = useState<'closed' | 'pick' | 'manage'>('closed')

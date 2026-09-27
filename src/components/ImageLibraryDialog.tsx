@@ -72,7 +72,7 @@ interface ImageLibraryDialogProps {
 
 export function ImageLibraryDialog({ open, onClose, onAddToStage }: ImageLibraryDialogProps) {
   const images = useLibraryStore((s) => s.images)
-  const flats = useFlatsStore((s) => s.flats)
+  const scenes = useFlatsStore((s) => s.scenes)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -81,7 +81,13 @@ export function ImageLibraryDialog({ open, onClose, onAddToStage }: ImageLibrary
 
   // Fall back to the first image if nothing (or a deleted image) is selected
   const selected = images.find((img) => img.id === selectedId) ?? images[0]
-  const usedBy = selected ? flats.filter((f) => f.imageId === selected.id).length : 0
+  // Flats in any scene that would be removed along with the selected image
+  const usage = selected
+    ? scenes
+        .map((scene) => ({ scene: scene.name, count: scene.flats.filter((f) => f.imageId === selected.id).length }))
+        .filter((u) => u.count > 0)
+    : []
+  const usedBy = usage.reduce((sum, u) => sum + u.count, 0)
 
   const onFilesChosen = async (e: ChangeEvent<HTMLInputElement>) => {
     const files = [...(e.target.files ?? [])]
@@ -171,7 +177,7 @@ export function ImageLibraryDialog({ open, onClose, onAddToStage }: ImageLibrary
         <DialogContent>
           <DialogContentText>
             {usedBy > 0
-              ? `${usedBy} flat${usedBy === 1 ? ' uses' : 's use'} this image and will also be removed. `
+              ? `${usedBy} flat${usedBy === 1 ? ' uses' : 's use'} this image (in ${usage.map((u) => `“${u.scene}”`).join(', ')}) and will also be removed. `
               : ''}
             This can't be undone.
           </DialogContentText>

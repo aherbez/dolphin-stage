@@ -59,7 +59,8 @@ export function reconcileLibrary() {
   reconciling ??= (async () => {
     await Promise.all([hydrated(useLibraryStore), hydrated(useFlatsStore)])
     const known = new Set(useLibraryStore.getState().images.map((img) => img.id))
-    for (const flat of useFlatsStore.getState().flats) {
+    const flats = useFlatsStore.getState().scenes.flatMap((scene) => scene.flats)
+    for (const flat of flats) {
       if (known.has(flat.imageId)) continue
       known.add(flat.imageId)
       try {

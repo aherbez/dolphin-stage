@@ -7,6 +7,7 @@ import { CameraPresetsSection } from './components/CameraPresetsSection.tsx'
 import { MeasureSection } from './components/MeasureSection.tsx'
 import { PanelSection } from './components/PanelSection.tsx'
 import { FlatsSection } from './components/FlatsSection.tsx'
+import { ScenesSection } from './components/ScenesSection.tsx'
 import { UnitsToggle } from './components/UnitsToggle.tsx'
 import { useMeasureStore } from './measure/measureStore.ts'
 import { reconcileLibrary } from './images/library.ts'
@@ -46,6 +47,9 @@ export default function App() {
         </Box>
         <PanelSection title="Camera views">
           <CameraPresetsSection controlsRef={controlsRef} />
+        </PanelSection>
+        <PanelSection title="Scenes">
+          <ScenesSection />
         </PanelSection>
         <PanelSection title="Set pieces">
           <FlatsSection controlsRef={controlsRef} />
